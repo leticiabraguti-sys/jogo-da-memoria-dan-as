@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Passaporte do Ritmo - Danças do Mundo</title>
+    <!-- Tailwind CSS para estilização moderna e rápida -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts para uma tipografia alegre -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Quicksand:wght@500;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Quicksand', sans-serif;
+            background: radial-gradient(circle, #2e1065 0%, #0f052d 100%);
+        }
+        .title-font {
+            font-family: 'Fredoka One', cursive;
+        }
+        /* Efeito de rotação 3D das cartas */
+        .card-container {
+            perspective: 1000px;
+        }
+        .card-inner {
+            transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transform-style: preserve-3d;
+        }
+        .card-container.flipped .card-inner {
+            transform: rotateY(180deg);
+        }
+        .card-front, .card-back {
+            backface-visibility: hidden;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        .card-back {
+            transform: rotateY(180deg);
+        }
+        /* Estrela decorativa brilhando */
+        @keyframes pulse-slow {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.1); }
+        }
+        .star-decor {
+            animation: pulse-slow 3s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-between p-4 text-white overflow-x-hidden select-none">
+
+    <!-- Fundo Estrelado Decorativo -->
+    <div class="absolute inset-0 pointer-events-none overflow-hidden z-0">
+        <div class="star-decor absolute top-10 left-10 text-yellow-300 text-3xl">✨</div>
+        <div class="star-decor absolute top-1/3 right-12 text-yellow-300 text-2xl" style="animation-delay: 1s;">🌟</div>
+        <div class="star-decor absolute bottom-20 left-16 text-yellow-300 text-3xl" style="animation-delay: 2s;">✨</div>
+        <div class="star-decor absolute bottom-1/3 left-1/2 text-purple-400 text-xl">💫</div>
+    </div>
+
+    <!-- Interface Principal do Jogo -->
+    <div class="w-full max-w-5xl z-10 flex flex-col items-center flex-grow justify-center">
+        
+        <!-- Cabeçalho -->
+        <header class="text-center mb-4 mt-2">
+            <h1 class="title-font text-3xl md:text-5xl text-yellow-400 tracking-wider drop-shadow-[0_4px_6px_rgba(0,0,0,0.6)] flex items-center justify-center gap-3">
+                🌎 PASSAPORTE DO RITMO 🧭
+            </h1>
+            <p class="text-sm md:text-base text-purple-200 font-bold mt-1">Combine a Dança com seu País e Curiosidade correspondente!</p>
+        </header>
+
+        <!-- Barra de Status e Controles -->
+        <div class="w-full max-w-3xl bg-purple-900/60 backdrop-blur-md rounded-2xl p-3 mb-4 flex flex-wrap justify-between items-center gap-3 border border-purple-500/30 shadow-lg">
+            <div class="flex items-center gap-4 text-sm md:text-base">
+                <span class="bg-purple-950/80 px-4 py-1.5 rounded-full border border-purple-400/40 font-bold flex items-center gap-1.5">
+                    ⏱️ <span id="timer-display">00:00</span>
+                </span>
+                <span class="bg-purple-950/80 px-4 py-1.5 rounded-full border border-purple-400/40 font-bold flex items-center gap-1.5">
+                    🔄 Movimentos: <span id="moves-display" class="text-yellow-300">0</span>
+                </span>
+            </div>
+            
+            <div class="flex items-center gap-2">
+                <!-- Botão de Som -->
+                <button id="sound-btn" onclick="toggleSound()" class="bg-purple-800 hover:bg-purple-700 active:scale-95 transition-all p-2 rounded-xl border border-purple-400/30 flex items-center gap-2" title="Ligar/Desligar Som">
+                    <span id="sound-icon">🔊</span>
+                </button>
+                <!-- Botão Reiniciar -->
+                <button onclick="resetGame()" class="bg-gradient-to-r from-amber-500 to-red-500 hover:from-amber-400 hover:to-red-400 text-white font-bold px-4 py-2 rounded-xl shadow-md active:scale-95 transition-all text-sm flex items-center gap-1.5">
+                    🔄 Reiniciar
+                </button>
+            </div>
+        </div>
+
+        <!-- Grade do Jogo (Memory Grid) -->
+        <main class="w-full max-w-4xl grid grid-cols-3 md:grid-cols-4 gap-3 md:gap-4 px-2" id="grid-container">
+            <!-- As cartas serão renderizadas aqui pelo JavaScript -->
+        </main>
+    </div>
+
+    <!-- Rodapé -->
+    <footer class="mt-6 mb-2 text-center text-xs text-purple-300/70 z-10">
+        Desenvolvido para Chromebooks • Estimulando a diversidade cultural e coordenação motora de forma lúdica. 🌟
+    </footer>
+
+    <!-- MODAL DE DESCOBERTA CULTURAL (Exibido a cada Match correto!) -->
+    <div id="match-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-gradient-to-b from-purple-900 to-violet-950 border-2 border-yellow-400 rounded-3xl p-6 max-w-md w-full text-center shadow-2xl relative animate-bounce-short transform scale-95 transition-all duration-300">
+            <!-- Emblema de Sucesso -->
+            <div class="text-6xl mb-3" id="modal-emoji">🎯</div>
+            <h3 class="title-font text-2xl md:text-3xl text-yellow-300 mb-1" id="modal-title">Par Encontrado!</h3>
+            <p class="text-sm text-green-400 font-bold uppercase tracking-wider mb-4" id="modal-country">País de Origem</p>
+            
+            <!-- Caixa de Informações -->
+            <div class="bg-purple-950/80 rounded-2xl p-4 border border-purple-500/30 mb-6 text-left">
+                <p class="text-sm md:text-base leading-relaxed text-purple-100" id="modal-desc">
+                    Curiosidade incrível sobre a dança!
+                </p>
+            </div>
+
+            <!-- Botão de Próximo -->
+            <button onclick="closeMatchModal()" class="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 text-white title-font py-3 px-6 rounded-2xl shadow-lg shadow-green-900/30 transition-transform active:scale-95 text-lg flex items-center justify-center gap-2">
+                Continuar Viagem 🌎✈️
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL DE VITÓRIA (Tela Final) -->
+    <div id="victory-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <canvas id="victory-confetti" class="absolute inset-0 pointer-events-none"></canvas>
+        <div class="bg-gradient-to-b from-purple-900 via-indigo-950 to-purple-950 border-4 border-yellow-400 rounded-3xl p-8 max-w-lg w-full text-center shadow-2xl relative z-10">
+            <div class="text-7xl mb-4">🏆</div>
+            <h2 class="title-font text-4xl text-yellow-400 mb-2">Diplomata do Ritmo!</h2>
+            <p class="text-purple-200 mb-6 font-bold">Você viajou por 6 culturas incríveis e desvendou todas as danças!</p>
+            
+            <!-- Estatísticas Finais -->
+            <div class="grid grid-cols-2 gap-4 mb-8">
+                <div class="bg-purple-950/90 p-3 rounded-2xl border border-purple-500/40">
+                    <p class="text-xs text-purple-300 uppercase font-bold">Tempo Total</p>
+                    <p class="text-2xl title-font text-yellow-300" id="final-time">00:00</p>
+                </div>
+                <div class="bg-purple-950/90 p-3 rounded-2xl border border-purple-500/40">
+                    <p class="text-xs text-purple-300 uppercase font-bold">Movimentos</p>
+                    <p class="text-2xl title-font text-yellow-300" id="final-moves">0</p>
+                </div>
+            </div>
+
+            <div class="space-y-3">
+                <button onclick="resetGame()" class="w-full bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-400 hover:to-amber-400 text-purple-950 title-font py-4 px-6 rounded-2xl shadow-lg transition-transform active:scale-95 text-xl flex items-center justify-center gap-2">
+                    Jogar Novamente 🔄
+                </button>
+                <p class="text-xs text-purple-400">Desafie um colega de classe para ver quem viaja mais rápido!</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- LÓGICA E JOGABILIDADE EM JAVASCRIPT -->
+    <script>
+        // Dados das cartas (Danças, Pares, Países e Curiosidades)
+        const danceData = [
+            {
+                id: 'frevo',
+                emoji: '⛱️',
+                danceName: 'Frevo',
+                country: 'Brasil 🇧🇷',
+                color: 'from-yellow-400 to-red-500',
+                desc: 'Nascido em Pernambuco, é uma dança carnavalesca de ritmo ultra-frenético! Os dançarinos dão saltos impressionantes e equilibram-se usando uma pequena e super colorida sombrinha.'
+            },
+            {
+                id: 'haka',
+                emoji: '💪',
+                danceName: 'Haka',
+                country: 'Nova Zelândia 🇳🇿',
+                color: 'from-stone-700 to-neutral-900',
+                desc: 'Uma dança de demonstração de força, orgulho e união da cultura do povo indígena Maori. Ficou mundialmente conhecida pela seleção de Rugby "All Blacks", que a executa com gritos fortes, batidas no peito e expressões faciais imponentes.'
+            },
+            {
+                id: 'leao',
+                emoji: '🦁',
+                danceName: 'Dança do Leão',
+                country: 'China 🇨🇳',
+                color: 'from-red-600 to-yellow-500',
+                desc: 'Tradicional nas celebrações do Ano Novo Chinês! Dois dançarinos se coordenam de forma incrível embaixo de uma fantástica fantasia de leão colorido para imitar seus movimentos, trazendo sorte e afastando energias negativas.'
+            },
+            {
+                id: 'swing',
+                emoji: '🎷',
+                danceName: 'Swing',
+                country: 'EUA 🇺🇸',
+                color: 'from-blue-500 to-indigo-600',
+                desc: 'Nascida com as Big Bands de Jazz nos anos 1920/1930. É uma dança em par extremamente ágil, cheia de improvisação, giros divertidos e até pequenos saltos acrobáticos no ar.'
+            },
+            {
+                id: 'gumboot',
+                emoji: '🥾',
+                desc: 'Uma dança rítmica fantástica criada por mineradores negros na África do Sul. Como eles eram proibidos de falar, batiam palmas nas próprias galochas de borracha pesadas para se comunicar e fazer música contagiante.',
+                country: 'África do Sul 🇿🇦',
+                color: 'from-emerald-600 to-teal-800',
+                danceName: 'Gumboot'
+            },
+            {
+                id: 'ballet',
+                emoji: '🩰',
+                danceName: 'Ballet Clássico',
+                country: 'França & Itália 🇪🇺',
+                color: 'from-pink-400 to-rose-500',
+                desc: 'Uma dança artística clássica que une técnica rigorosa, extrema postura e leveza. Os dançarinos usam sapatilhas de ponta especiais e narram histórias inteiras apenas com movimentos e sem pronunciar nenhuma palavra!'
+            }
+        ];
+
+        // Lógica de Estado do Jogo
+        let cards = [];
+        let flippedCards = [];
+        let matchedPairsCount = 0;
+        let moves = 0;
+        let gameActive = false;
+        let timer = null;
+        let secondsElapsed = 0;
+        let soundEnabled = true;
+
+        // Gerador de Áudio Sintetizado (Evita downloads e resolve incompatibilidade com offline)
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playSynthSound(type) {
+            if (!soundEnabled) return;
+            
+            // Retoma áudio se estiver suspenso (proteção do navegador)
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            const now = audioCtx.currentTime;
+
+            if (type === 'flip') {
+                // Som sutil de clique/virada
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(300, now);
+                osc.frequency.exponentialRampToValueAtTime(150, now + 0.15);
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.15);
+                osc.start(now);
+                osc.stop(now + 0.15);
+            } else if (type === 'match') {
+                // Som de acerto alegre e brilhante (dois bips subindo)
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(523.25, now); // C5
+                osc.frequency.setValueAtTime(659.25, now + 0.1); // E5
+                osc.frequency.setValueAtTime(783.99, now + 0.2); // G5
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.4);
+                osc.start(now);
+                osc.stop(now + 0.4);
+            } else if (type === 'error') {
+                // Som rápido de erro grave
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(180, now);
+                osc.frequency.setValueAtTime(130, now + 0.1);
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+                osc.start(now);
+                osc.stop(now + 0.25);
+            } else if (type === 'victory') {
+                // Fanfarra alegre e triunfal
+                const notes = [261.63, 329.63, 392.00, 523.25, 659.25, 783.99, 1046.50];
+                notes.forEach((freq, index) => {
+                    const noteOsc = audioCtx.createOscillator();
+                    const noteGain = audioCtx.createGain();
+                    noteOsc.connect(noteGain);
+                    noteGain.connect(audioCtx.destination);
+                    
+                    noteOsc.type = 'triangle';
+                    noteOsc.frequency.setValueAtTime(freq, now + index * 0.1);
+                    noteGain.gain.setValueAtTime(0.15, now + index * 0.1);
+                    noteGain.gain.linearRampToValueAtTime(0.01, now + index * 0.1 + 0.3);
+                    
+                    noteOsc.start(now + index * 0.1);
+                    noteOsc.stop(now + index * 0.1 + 0.3);
+                });
+            }
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            const soundIcon = document.getElementById('sound-icon');
+            const soundBtn = document.getElementById('sound-btn');
+            if (soundEnabled) {
+                soundIcon.textContent = '🔊';
+                soundBtn.classList.remove('opacity-60');
+            } else {
+                soundIcon.textContent = '🔇';
+                soundBtn.classList.add('opacity-60');
+            }
+        }
+
+        // Embaralhador Fisher-Yates
+        function shuffle(array) {
+            let currentIndex = array.length, randomIndex;
+            while (currentIndex != 0) {
+                randomIndex = Math.floor(Math.random() * currentIndex);
+                currentIndex--;
+                [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+            }
+            return array;
+        }
+
+        // Prepara e embaralha as cartas para o modo educativo
+        function prepareCards() {
+            let prepared = [];
+            danceData.forEach(dance => {
+                // Carta Tipo A: Ícone e Nome da Dança
+                prepared.push({
+                    uniqueId: `${dance.id}-dance`,
+                    pairId: dance.id,
+                    type: 'dance',
+                    title: dance.danceName,
+                    subtitle: 'Dança',
+                    content: dance.emoji,
+                    color: dance.color,
+                    fullInfo: dance
+                });
+                // Carta Tipo B: País e Bandeira
+                prepared.push({
+                    uniqueId: `${dance.id}-info`,
+                    pairId: dance.id,
+                    type: 'info',
+                    title: dance.country,
+                    subtitle: 'País e Origem',
+                    content: '🌍',
+                    color: 'from-indigo-600 to-purple-800',
+                    fullInfo: dance
+                });
+            });
+            return shuffle(prepared);
+        }
+
+        // Renderiza a Grade de Cartas
+        function renderGrid() {
+            const container = document.getElementById('grid-container');
+            container.innerHTML = '';
+
+            cards.forEach((card, index) => {
+                const cardEl = document.createElement('div');
+                cardEl.className = 'card-container h-36 md:h-44 w-full cursor-pointer relative';
+                cardEl.dataset.index = index;
+                cardEl.onclick = () => handleCardClick(index);
+
+                // Determina a parte visual interna da carta
+                let cardBackHTML = '';
+                if (card.type === 'dance') {
+                    cardBackHTML = `
+                        <div class="flex flex-col items-center justify-between h-full p-2 text-center">
+                            <span class="text-xs uppercase font-extrabold tracking-wider text-purple-200">Qual a Origem?</span>
+                            <span class="text-4xl md:text-5xl my-1 drop-shadow-md transform hover:scale-110 transition-transform">${card.content}</span>
+                            <span class="text-sm md:text-base font-bold title-font leading-tight text-yellow-300">${card.title}</span>
+                        </div>
+                    `;
+                } else {
+                    cardBackHTML = `
+                        <div class="flex flex-col items-center justify-between h-full p-2 text-center">
+                            <span class="text-xs uppercase font-extrabold tracking-wider text-yellow-300">Qual a Dança?</span>
+                            <span class="text-3xl my-1">🧭</span>
+                            <div class="w-full">
+                                <span class="text-sm md:text-base font-bold title-font leading-tight block text-white">${card.title}</span>
+                                <span class="text-[10px] text-purple-200 italic opacity-80 block truncate">Toque para ver</span>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                cardEl.innerHTML = `
+                    <div class="card-inner w-full h-full relative" id="card-inner-${index}">
+                        <!-- Frente da Carta (Oculta) -->
+                        <div class="card-front w-full h-full rounded-2xl bg-gradient-to-br from-purple-800 to-indigo-950 border-2 border-purple-400/50 flex flex-col items-center justify-center shadow-md hover:border-yellow-400/80 transition-all">
+                            <span class="text-3xl md:text-4xl filter drop-shadow-lg">✈️</span>
+                            <span class="text-[10px] md:text-xs text-purple-300 font-bold uppercase tracking-wider mt-2">Passaporte</span>
+                        </div>
+                        <!-- Verso da Carta (Revelada) -->
+                        <div class="card-back w-full h-full rounded-2xl bg-gradient-to-br ${card.color} border-2 border-white shadow-xl">
+                            ${cardBackHTML}
+                        </div>
+                    </div>
+                `;
+                container.appendChild(cardEl);
+            });
+        }
+
+        // Processa o clique nas cartas
+        function handleCardClick(index) {
+            // Impedir cliques indesejados
+            if (!gameActive || flippedCards.length >= 2) return;
+            
+            const selectedCard = cards[index];
+            const cardElement = document.getElementById(`card-inner-${index}`);
+            const cardContainer = cardElement.parentElement;
+
+            // Se a carta já estiver revelada ou resolvida, ignora o clique
+            if (cardContainer.classList.contains('flipped') || cardContainer.classList.contains('matched')) return;
+
+            // Inicia o cronômetro no primeiro clique do jogo
+            if (secondsElapsed === 0 && !timer) {
+                startTimer();
+            }
+
+            // Vira a carta visualmente
+            cardContainer.classList.add('flipped');
+            playSynthSound('flip');
+            flippedCards.push({ index, card: selectedCard });
+
+            // Se virou duas cartas, valida a correspondência
+            if (flippedCards.length === 2) {
+                moves++;
+                document.getElementById('moves-display').textContent = moves;
+                checkMatch();
+            }
+        }
+
+        // Valida se as duas cartas formam um par correspondente
+        function checkMatch() {
+            const [first, second] = flippedCards;
+
+            if (first.card.pairId === second.card.pairId && first.card.type !== second.card.type) {
+                // ACERTOU!
+                setTimeout(() => {
+                    playSynthSound('match');
+                    
+                    // Adiciona classe de resolvido para efeitos visuais de sucesso
+                    document.querySelectorAll('.card-container').forEach((el, idx) => {
+                        if (idx === first.index || idx === second.index) {
+                            el.classList.add('matched');
+                            el.querySelector('.card-back').classList.remove('border-white');
+                            el.querySelector('.card-back').classList.add('border-green-400', 'animate-pulse');
+                        }
+                    });
+
+                    // Limpa controle de virada
+                    flippedCards = [];
+                    matchedPairsCount++;
+
+                    // Abre o painel educativo sobre essa dança correspondente
+                    openMatchModal(first.card.fullInfo);
+
+                    // Valida se venceu o jogo inteiro
+                    if (matchedPairsCount === danceData.length) {
+                        endGame();
+                    }
+                }, 600);
+            } else {
+                // ERROU! Vira as cartas de volta
+                setTimeout(() => {
+                    playSynthSound('error');
+                    
+                    const firstEl = document.getElementById(`card-inner-${first.index}`).parentElement;
+                    const secondEl = document.getElementById(`card-inner-${second.index}`).parentElement;
+                    
+                    firstEl.classList.remove('flipped');
+                    secondEl.classList.remove('flipped');
+                    
+                    flippedCards = [];
+                }, 1400);
+            }
+        }
+
+        // Modal educativo de par encontrado
+        function openMatchModal(danceInfo) {
+            gameActive = false; // pausa o jogo temporariamente para leitura
+            
+            document.getElementById('modal-emoji').textContent = danceInfo.emoji;
+            document.getElementById('modal-title').textContent = danceInfo.danceName;
+            document.getElementById('modal-country').textContent = `Origem: ${danceInfo.country}`;
+            document.getElementById('modal-desc').textContent = danceInfo.desc;
+            
+            const modal = document.getElementById('match-modal');
+            modal.classList.remove('hidden');
+        }
+
+        function closeMatchModal() {
+            document.getElementById('match-modal').classList.add('hidden');
+            
+            // Só libera o jogo de volta se não tiver finalizado tudo
+            if (matchedPairsCount < danceData.length) {
+                gameActive = true;
+            }
+        }
+
+        // Controle de Tempo (Cronômetro)
+        function startTimer() {
+            secondsElapsed = 0;
+            document.getElementById('timer-display').textContent = "00:00";
+            timer = setInterval(() => {
+                secondsElapsed++;
+                const mins = String(Math.floor(secondsElapsed / 60)).padStart(2, '0');
+                const secs = String(secondsElapsed % 60).padStart(2, '0');
+                document.getElementById('timer-display').textContent = `${mins}:${secs}`;
+            }, 1000);
+        }
+
+        function stopTimer() {
+            clearInterval(timer);
+            timer = null;
+        }
+
+        // Final do Jogo (Vitória!)
+        function endGame() {
+            stopTimer();
+            gameActive = false;
+            
+            setTimeout(() => {
+                playSynthSound('victory');
+                
+                // Atualiza estatísticas do Modal de Vitória
+                const finalMins = String(Math.floor(secondsElapsed / 60)).padStart(2, '0');
+                const finalSecs = String(secondsElapsed % 60).padStart(2, '0');
+                document.getElementById('final-time').textContent = `${finalMins}:${finalSecs}`;
+                document.getElementById('final-moves').textContent = moves;
+
+                // Mostra a tela de vitória
+                document.getElementById('victory-modal').classList.remove('hidden');
+                startConfetti();
+            }, 500);
+        }
+
+        // Reinicia e reconfigura o Jogo do Zero
+        function resetGame() {
+            stopTimer();
+            secondsElapsed = 0;
+            moves = 0;
+            matchedPairsCount = 0;
+            flippedCards = [];
+            gameActive = true;
+
+            document.getElementById('moves-display').textContent = "0";
+            document.getElementById('timer-display').textContent = "00:00";
+            document.getElementById('victory-modal').classList.add('hidden');
+            document.getElementById('match-modal').classList.add('hidden');
+            
+            stopConfetti();
+
+            // Sorteia novas cartas e renderiza
+            cards = prepareCards();
+            renderGrid();
+        }
+
+        // --- SISTEMA INTERNO DE CONFETES NO CANVAS ---
+        let confettiInterval = null;
+        function startConfetti() {
+            const canvas = document.getElementById('victory-confetti');
+            const ctx = canvas.getContext('2d');
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
+
+            const colors = ['#fbbf24', '#f87171', '#34d399', '#60a5fa', '#c084fc', '#f472b6'];
+            const confettiCount = 100;
+            const confetti = [];
+
+            for (let i = 0; i < confettiCount; i++) {
+                confetti.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height - canvas.height,
+                    size: Math.random() * 8 + 5,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    speed: Math.random() * 3 + 2,
+                    angle: Math.random() * 360,
+                    spinSpeed: Math.random() * 4 - 2
+                });
+            }
+
+            function updateConfetti() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                confetti.forEach(c => {
+                    c.y += c.speed;
+                    c.angle += c.spinSpeed;
+                    if (c.y > canvas.height) {
+                        c.y = -20;
+                        c.x = Math.random() * canvas.width;
+                    }
+                    ctx.save();
+                    ctx.translate(c.x, c.y);
+                    ctx.rotate((c.angle * Math.PI) / 180);
+                    ctx.fillStyle = c.color;
+                    ctx.fillRect(-c.size / 2, -c.size / 2, c.size, c.size);
+                    ctx.restore();
+                });
+            }
+
+            confettiInterval = setInterval(updateConfetti, 1000 / 60);
+
+            // Ajusta o tamanho do Canvas se a tela mudar de tamanho
+            window.addEventListener('resize', () => {
+                canvas.width = canvas.parentElement.clientWidth;
+                canvas.height = canvas.parentElement.clientHeight;
+            });
+        }
+
+        function stopConfetti() {
+            if (confettiInterval) {
+                clearInterval(confettiInterval);
+                confettiInterval = null;
+            }
+            const canvas = document.getElementById('victory-confetti');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        // Executado ao carregar a página
+        window.onload = () => {
+            resetGame();
+        };
+    </script>
+</body>
+</html>
